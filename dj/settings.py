@@ -40,23 +40,27 @@ INSTALLED_APPS = [
 
     # apps
     'app',
+    'accounts'
 
     # third parties
     'django_user_agents',
+    'corsheaders',
+    'debug_toolbar'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # comment this line if you working with api
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     'django_user_agents.middleware.UserAgentMiddleware',
-    'app.middleware.WebRequestMiddleware'
+    'app.middleware.WebRequestMiddleware',
+    'app.middleware.RequestBodyToDataMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware'
 ]
 
 ROOT_URLCONF = 'dj.urls'
@@ -95,18 +99,10 @@ DATABASES = {
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
+    { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
 ]
 
 
@@ -114,13 +110,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 
@@ -138,3 +130,20 @@ MEDIA_ROOT = os.path.join(VENV_PATH, 'media_root')
 # Name of cache backend to cache user agents. If it not specified default
 # cache alias will be used. Set to `None` to disable caching.
 USER_AGENTS_CACHE = 'default'
+
+
+
+# cors setup
+USE_API_AND_ALLOW_CORS = False
+if USE_API_AND_ALLOW_CORS:
+    CORS_ALLOW_ALL_ORIGINS = True
+
+    cors_middleware = 'corsheaders.middleware.CorsMiddleware'
+    MIDDLEWARE.insert(2, cors_middleware)
+
+    index_of_csrf = MIDDLEWARE.index('django.middleware.csrf.CsrfViewMiddleware')
+    MIDDLEWARE.pop(index_of_csrf)
+
+# django debug toolbar setup
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+INTERNAL_IPS = ['127.0.0.1']

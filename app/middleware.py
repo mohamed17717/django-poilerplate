@@ -15,6 +15,22 @@ User = get_user_model()
 def dumps(value):
   return json.dumps(value,default=lambda o:None)
 
+class RequestBodyToDataMiddleware(object):
+  def __init__(self, get_response):
+    self.get_response = get_response
+
+  def __call__(self, request):
+    return self.get_response(request)
+
+  def process_view(self, request, view_func, view_args, view_kwargs):
+    if not hasattr(request, 'data'):
+      request_body = request.body
+      try: request_body = request_body.decode('utf8')
+      except: pass
+
+      setattr(request,'data', request_body)
+
+
 class WebRequestMiddleware(object):
   def process_view(self, request, view_func, view_args, view_kwargs):
     setattr(request,'hide_post',view_kwargs.pop('hide_post',False))
@@ -26,8 +42,8 @@ class WebRequestMiddleware(object):
     response = self.get_response(request)
     return self.process_response(request, response)
 
-  def process_exception(self, request, exception): 
-    return HttpResponse("in exception")
+  # def process_exception(self, request, exception): 
+  #   return HttpResponse("in exception")
 
   def process_response(self, request, response):
     if request.path.endswith('/favicon.ico'):
@@ -37,14 +53,14 @@ class WebRequestMiddleware(object):
       new_location = response.get('location',None)
       content_length = response.get('content-length',None)
 
-      if new_location and content_length == '0':
+      if new_location and content_length is '0':
         new_parsed = urlparse(new_location)
 
         old = (('http','https')[request.is_secure()], request.get_host(), '{0}/'.format(request.path), request.META['QUERY_STRING'])
         new = (new_parsed.scheme, new_parsed.netloc, new_parsed.path, new_parsed.query)
 
         if old == new:
-          #dont log - it's just adding a /
+          #don't log - it's just adding a /
           return response
     try:
       self.save(request, response)
@@ -54,10 +70,7 @@ class WebRequestMiddleware(object):
     return response
 
   def save(self, request, response):
-    if hasattr(request, 'user'):
-      user = request.user if type(request.user) == User else None
-    else:
-      user = None
+    user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
 
     meta = request.META.copy()
     meta.pop('QUERY_STRING',None)
@@ -68,27 +81,29 @@ class WebRequestMiddleware(object):
       remote_addr_fwd = meta['HTTP_X_FORWARDED_FOR'].split(",")[0].strip()
       if remote_addr_fwd == meta['HTTP_X_FORWARDED_FOR']:
         meta.pop('HTTP_X_FORWARDED_FOR')
+    remote_addr = meta.pop('REMOTE_ADDR', None) or meta.pop('HTTP_X_REAL_IP', None) or remote_addr_fwd
 
     post = None
     uri = request.build_absolute_uri()
-    if request.POST and uri != '/login/':
+    if request.POST and getattr(request,'hide_post') != True:
       post = dumps(request.POST)
 
     models.WebRequest(
       host = request.get_host(),
       path = request.path,
       method = request.method,
-      uri = request.build_absolute_uri(),
+      uri = uri,
       status_code = response.status_code,
       user_agent = meta.pop('HTTP_USER_AGENT',None),
-      remote_addr = meta.pop('REMOTE_ADDR',None),
+      remote_addr = remote_addr,
       remote_addr_fwd = remote_addr_fwd,
       meta = None if not meta else dumps(meta),
       cookies = None if not request.COOKIES else dumps(request.COOKIES),
       get = None if not request.GET else dumps(request.GET),
-      post = None if (not request.POST or getattr(request,'hide_post') == True) else dumps(request.POST),
+      post = post,
       raw_post = None,
       is_secure = request.is_secure(),
       is_ajax = request.is_ajax(),
       user = user
     ).save()
+
