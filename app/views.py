@@ -10,28 +10,39 @@ from utils.decorators import(
   cache_request
 )
 
+from django import template
+from django.shortcuts import render_to_response, HttpResponse
+from utils.modules import RequestAnalyzerTools
+
+from utils.views_mixins import GenerateRequestContext
+
+
+def error_page(number):
+  template_name = 'error-page.html'
+  def view_function(request, *args, **kwargs):
+    ua = request.META['HTTP_USER_AGENT']
+    ua_details = RequestAnalyzerTools.get_user_agent_details(ua)
+
+    is_from_api = not any(ua_details['flags'].values()) # all must be false
+    if is_from_api:
+      response = HttpResponse(status=number)
+    else:
+      context = { 'number': number, **GenerateRequestContext(request) }
+      response = render_to_response(template_name, context)
+      response.status_code = number
+
+    return response
+  return view_function
+
+
 # Create your views here.
 def index(request):
-  return HttpResponse('Hello from app')
+  return render(request, 'base.html', {'request': request})
 
-
-def paginatePosts(qs, page):
-  paginator = Paginator(qs, 12)
-
-  try:
-    posts = paginator.page(page)
-  except:
-    posts = []
-
-  return {'list': posts, 'pg': paginator}
 
 # static views
 def static_template(templateName):
   def view(request):
     return render(request, templateName, {})
   return view
-
-@cache_request('default_context', timeout=60*60*12)
-def get_defualt_context(request=None):
-  return {}
 

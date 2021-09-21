@@ -25,7 +25,10 @@ SECRET_KEY = '$e5rh03te^#or+2dvix(9zgnp0*xjya92e3guwni)r30p73x4-'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost'
+]
 
 
 # Application definition
@@ -40,12 +43,13 @@ INSTALLED_APPS = [
 
     # apps
     'app',
-    'accounts'
+    'accounts',
 
     # third parties
+    'crispy_forms',
     'django_user_agents',
     'corsheaders',
-    'debug_toolbar'
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -131,8 +135,6 @@ MEDIA_ROOT = os.path.join(VENV_PATH, 'media_root')
 # cache alias will be used. Set to `None` to disable caching.
 USER_AGENTS_CACHE = 'default'
 
-
-
 # cors setup
 USE_API_AND_ALLOW_CORS = False
 if USE_API_AND_ALLOW_CORS:
@@ -146,4 +148,5 @@ if USE_API_AND_ALLOW_CORS:
 
 # django debug toolbar setup
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-INTERNAL_IPS = ['127.0.0.1']
+INTERNAL_IPS = ('127.0.0.1',)
+

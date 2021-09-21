@@ -11,7 +11,7 @@ from django.http import (
 import json
 from datetime import datetime
 
-from utils.modules.JWT import JWTAuth
+from .modules.JWT import JWTAuth
 
 
 # may cause error in get params byt i hope not

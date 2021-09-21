@@ -1,25 +1,55 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
-from jsonfield import JSONField
+from .managers import AccountManager
+from utils.models_mixins import OptimizeImageField
+
+import secrets 
 
 
 User = get_user_model()
 
 
-# Create your models here.
-class Profile(models.Model):
-  user = models.ForeignKey(User, related_name='user_profile', on_delete=models.CASCADE)
-  name = models.CharField(max_length=50, blank=True, null=True)
-  age = models.IntegerField(blank=True, null=True)
+class Account(models.Model):
+  DEFAULT_USER_PICTURE = 'https://cdn2.iconfinder.com/data/icons/people-occupation-job/64/Ninja-Warrior-Assassin-Japan-Fighter-Avatar-Martial_arts-512.png'
+  PICTURE_MINIMUM_DIMENSION = 200
 
-  picture = models.ImageField(upload_to='thumbnails', default='thumbnails/default.jpg')
-  shitty_data = JSONField()
+  user = models.OneToOneField(User, related_name='user_account', on_delete=models.CASCADE)
+  token = models.CharField(max_length=128, unique=True, editable=False, blank=True)
 
-  def serialize(self):
-    return {
-      'user': self.user.__dict__,
-      'name': self.name,
-      'age': self.age
-    }
+  picture = models.ImageField(upload_to='account_pictures', blank=True, null=True)
+
+  created = models.DateField(auto_now_add=True)
+  updated = models.DateField(auto_now=True)
+
+  objects = AccountManager()
+
+  class Meta:
+    verbose_name = 'Account'
+    verbose_name_plural = 'Accounts'
+
+  def __str__(self):
+    return self.user.username+f'({self.token})'
+
+  def save(self, *args, **kwargs):
+    if not self.pk:
+      self.token = secrets.token_hex(nbytes=16)
+
+    if self.picture:
+      OptimizeImageField(self.picture, self.PICTURE_MINIMUM_DIMENSION)
+
+    return super(Account, self).save(*args, **kwargs)
+
+
+  # computed fields
+  @property
+  def get_username(self):
+    name = f'{self.user.first_name} {self.user.last_name}'.strip() or self.user.username
+    return name
+
+  @property
+  def get_picture(self):
+    picture = self.picture and self.picture.url or self.DEFAULT_USER_PICTURE
+    return picture
+
 
